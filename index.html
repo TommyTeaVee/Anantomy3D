@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+    <head>
+		<meta charset="utf-8">
+        <title>Human Body Anatomy</title>
+		<link rel="stylesheet" media='screen and (min-width: 481px)' href="css/desktop.css"/>
+		<link rel="stylesheet" media='screen and (max-width: 480px)' href="css/mobile.css"/> 	
+	</head>
+
+	<body>
+		<header>
+            <h1>Human Body Anatomy</h1>
+        </header> 
+
+		<div id="container"></div>
+		<div id="info"></div>
+		
+		<script src="js/bodydata.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+		<script src="build/three.min.js"></script>
+		<script src="js/UCSCharacter.js"></script>
+		<script src="js/Detector.js"></script>
+		<script src='js/libs/dat.gui.min.js'></script>
+		<script src="js/controls/OrbitControls.js"></script>
+		<script src="../libs/JSONLoader.js"></script>
+		
+		<script>	
+			var SCREEN_WIDTH = window.innerWidth;
+			var SCREEN_HEIGHT = window.innerHeight;
+
+			var container, camera, scene, renderer, mesh;
+			var projector, mouse = { x: 0, y: 0 }, INTERSECTED;
+
+			var mouseX = 0, mouseY = 0;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			var clock = new THREE.Clock();
+			
+			var gui, paramaters, skinConfig, morphConfig;
+			var sprite1;
+			var canvas1, context1, texture1;
+
+			init();
+			animate();
+			//label();
+			function init() {
+
+				container = document.getElementById( 'container' );
+
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 100000 );
+				camera.position.set( 2000, 5000, 5000 );
+
+				scene = new THREE.Scene();
+
+				// LIGHTS
+
+				var light = new THREE.DirectionalLight( 0xffffff, 1 );
+				light.position.set( 0, 140, 500 );
+				scene.add( light );
+
+				// var light = new THREE.DirectionalLight( 0xffffff, 1 );
+				// light.position.set( 0, -1, 0 );
+				// scene.add( light );
+
+				// RENDERER
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setClearColor( 0x000000 );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+				container.appendChild( renderer.domElement );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+				controls = new THREE.OrbitControls( camera, renderer.domElement );
+				controls.center.set( 0, 3000, 0);
+				controls.addEventListener( 'change', render );
+
+				// CHARACTER
+				character = new THREE.UCSCharacter();
+
+				// GUI
+				character.onLoadComplete = function() {
+					gui = new dat.GUI();
+					setupGUI();
+					gui.width = 300;
+					gui.open();
+				}
+
+				var loader = new THREE.XHRLoader();
+				loader.load("models/skinned/UCS_config.json", function ( text ) {
+					var config = JSON.parse( text );
+					character.loadParts( config );
+					scene.add( character.root );
+
+				} );	
+
+				// // initialize object to perform world/screen calculations
+				// projector = new THREE.Projector();
+	
+				// // when the mouse moves, call the given function
+				// document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+				// var spriteMaterial = new THREE.SpriteMaterial ({useScreenCoordinates: true, map: texture1});
+				// sprite1 = new THREE.Sprite( spriteMaterial );
+				// sprite1.scale.set(200,100,1.0);
+				// sprite1.position.set( 50, 50, 0 );
+				// scene.add( sprite1 );
+			}
+
+			function setupGUI() {
+				
+
+				gui = new dat.GUI();
+				parameters = { x: 0, y: -500, z: 0};
+				var folder1 = gui.addFolder( "Position" );
+				var modelX = folder1.add( parameters, 'x' ).min(-1000).max(5000).step(1).listen();
+				var modelY = folder1.add( parameters, 'y' ).min(-500).max(5000).step(1).listen();
+				var modelZ = folder1.add( parameters, 'z' ).min(-1000).max(5000).step(1).listen();
+				//var rSpeed = folder1.add( parameters, 'Rotation Speed' ).min(-0.01).max(0.01).step(1).listen();
+				folder1.open();
+				var folder2 = gui.addFolder("Rotation");
+				// var rSpeed = folder2.add( parameters, 'Rotation Speed' ).min(-0.01).max(0.01).step(1).listen();
+				// folder2.open();
+				
+				modelX.onChange(function(value) 
+				{   (character.root).position.x = value;   });
+				modelY.onChange(function(value) 
+				{   (character.root).position.y = value;   });
+				modelZ.onChange(function(value) 
+				{   (character.root).position.z = value;   });
+
+				var skinGui = gui.addFolder( "Skins" );
+				
+				skinConfig = {
+					wireframe: false
+				};
+				
+				var skinCallback = function( index ) {
+					return function () {
+						character.setSkin( index );
+					};
+				}
+
+				for ( var i = 0; i < character.numSkins; i++ ) {
+					var name = character.skins[ i ].name;
+					skinConfig[ name ] = skinCallback( i );
+				}
+				
+				for ( var i = 0; i < character.numSkins; i++ ) {
+					skinGui.add( skinConfig, character.skins[i].name );
+				}
+			}
+
+				
+			// 	loader.position.x = parameters.x;
+			// 	loader.position.y = parameters.y;
+			// 	loader.position.z = parameters.z;
+			
+
+			// }
+
+			function makeTextSprite( message, parameters ){
+				if ( parameters === undefined ) parameters = {};
+				
+				var fontface = parameters.hasOwnProperty("fontface") ? 
+					parameters["fontface"] : "Arial";
+				
+				var fontsize = parameters.hasOwnProperty("fontsize") ? 
+					parameters["fontsize"] : 18;
+				
+				var borderThickness = parameters.hasOwnProperty("borderThickness") ? 
+					parameters["borderThickness"] : 4;
+				
+				var borderColor = parameters.hasOwnProperty("borderColor") ?
+					parameters["borderColor"] : { r:0, g:0, b:0, a:1.0 };
+				
+				var backgroundColor = parameters.hasOwnProperty("backgroundColor") ?
+					parameters["backgroundColor"] : { r:255, g:255, b:255, a:1.0 };
+
+				var spriteAlignment = THREE.SpriteAlignment.topLeft;
+					
+				var canvas = document.createElement('canvas');
+				var context = canvas.getContext('2d');
+				context.font = "Bold " + fontsize + "px " + fontface;
+			    
+				// get size data (height depends only on font size)
+				var metrics = context.measureText( message );
+				var textWidth = metrics.width;
+				
+				// background color
+				context.fillStyle   = "rgba(" + backgroundColor.r + "," + backgroundColor.g + ","
+											  + backgroundColor.b + "," + backgroundColor.a + ")";
+				// border color
+				context.strokeStyle = "rgba(" + borderColor.r + "," + borderColor.g + ","
+											  + borderColor.b + "," + borderColor.a + ")";
+
+				context.lineWidth = borderThickness;
+				roundRect(context, borderThickness/2, borderThickness/2, textWidth + borderThickness, fontsize * 1.4 + borderThickness, 6);
+				// 1.4 is extra height factor for text below baseline: g,j,p,q.
+				
+				// text color
+				context.fillStyle = "rgba(0, 0, 0, 1.0)";
+
+				context.fillText( message, borderThickness, fontsize + borderThickness);
+				
+				// canvas contents will be used for a texture
+				var texture = new THREE.Texture(canvas) 
+				texture.needsUpdate = true;
+
+				var spriteMaterial = new THREE.SpriteMaterial( 
+					{ map: texture, useScreenCoordinates: false, alignment: spriteAlignment } );
+				var sprite = new THREE.Sprite( spriteMaterial );
+				sprite.scale.set(100,50,1.0);
+				return sprite;	
+			}
+
+			function roundRect(ctx, x, y, w, h, r) {
+			    ctx.beginPath();
+			    ctx.moveTo(x+r, y);
+			    ctx.lineTo(x+w-r, y);
+			    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+			    ctx.lineTo(x+w, y+h-r);
+			    ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+			    ctx.lineTo(x+r, y+h);
+			    ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+			    ctx.lineTo(x, y+r);
+			    ctx.quadraticCurveTo(x, y, x+r, y);
+			    ctx.closePath();
+			    ctx.fill();
+				ctx.stroke();   
+			}
+
+			function onWindowResize() {
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			function onDocumentMouseMove( event ) {
+				// the following line would stop any other event handler from firing
+				// (such as the mouse's TrackballControls)
+				// event.preventDefault();
+
+				// update sprite position
+				sprite1.position.set( event.clientX, event.clientY - 20, 0 );
+				
+				// update the mouse variable
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+			}
+			
+
+			function animate() {
+				requestAnimationFrame( animate );
+				(character.root).rotation.y += 0.02;
+				controls.update();
+				render();
+				//update();
+			}
+
+			// function update(){
+	
+			// 	// create a Ray with origin at the mouse position
+			// 	//   and direction into the scene (camera direction)
+			// 	var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
+			// 	projector.unprojectVector( vector, camera );
+			// 	var ray = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+			// 	// create an array containing all objects in the scene with which the ray intersects
+			// 	var intersects = ray.intersectObjects( scene.children );
+
+			// 	// INTERSECTED = the object in the scene currently closest to the camera 
+			// 	//		and intersected by the Ray projected from the mouse position 	
+				
+			// 	// if there is one (or more) intersections
+			// 	if ( intersects.length > 0 )
+			// 	{
+			// 		// if the closest object intersected is not the currently stored intersection object
+			// 		if ( intersects[ 0 ].object != INTERSECTED ) 
+			// 		{
+			// 		    // restore previous intersection object (if it exists) to its original color
+			// 			if ( INTERSECTED ) 
+			// 				INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+			// 			// store reference to closest object as current intersection object
+			// 			INTERSECTED = intersects[ 0 ].object;
+			// 			// store color of closest object (for later restoration)
+			// 			INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+			// 			// set a new color for closest object
+			// 			INTERSECTED.material.color.setHex( 0xffff00 );
+						
+			// 			// update text, if it has a "name" field.
+			// 			if ( intersects[ 0 ].object.name ){
+			// 			    context1.clearRect(0,0,640,480);
+			// 				var message = intersects[ 0 ].object.name;
+			// 				var metrics = context1.measureText(message);
+			// 				var width = metrics.width;
+			// 				context1.fillStyle = "rgba(0,0,0,0.95)"; // black border
+			// 				context1.fillRect( 0,0, width+8,20+8);
+			// 				context1.fillStyle = "rgba(255,255,255,0.95)"; // white filler
+			// 				context1.fillRect( 2,2, width+4,20+4 );
+			// 				context1.fillStyle = "rgba(0,0,0,1)"; // text color
+			// 				context1.fillText( message, 4,20 );
+			// 				texture1.needsUpdate = true;
+			// 			}
+			// 			else
+			// 			{
+			// 				context1.clearRect(0,0,300,300);
+			// 				texture1.needsUpdate = true;
+			// 			}
+			// 		}
+			// 	} 
+			// 	else // there are no intersections
+			// 	{
+			// 		// restore previous intersection object (if it exists) to its original color
+			// 		if ( INTERSECTED ) 
+			// 			INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+			// 		// remove previous intersection object reference
+			// 		//     by setting current intersection object to "nothing"
+			// 		INTERSECTED = null;
+			// 		context1.clearRect(0,0,300,300);
+			// 		texture1.needsUpdate = true;
+			// 	}
+
+				
+			// 	controls.update();
+			// 	stats.update();
+			// }
+
+			function render() {
+				var delta = 0.75 * clock.getDelta();
+				THREE.AnimationHandler.update( delta );
+				renderer.render( scene, camera );
+			}
+
+
+
+		</script>	
+	</body>
+</html>
+ 

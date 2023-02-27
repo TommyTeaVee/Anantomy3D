@@ -1,0 +1,43 @@
+			body {
+				color: #000;
+				font-size:1.2em;
+				text-align:center;
+				background-image: radial-gradient(ellipse at center center , rgb(138, 148, 163) 0%, rgb(33, 38, 43) 100%);
+				background-color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				position: absolute;
+				top:280px; width: 32%;
+				background-color: #808080;
+				opacity: 07;
+				color: #fff;
+				text-align: justify;
+				margin:3%;
+				transition: all 0.5s ease;
+				font-family: unset;
+			}
+
+			a {
+				color: #0af;
+			}
+
+			.folder:nth-of-type(2){
+				display: none;
+
+			}
+
+			header{
+				position: fixed;
+				color: #ff0;
+				background-color: #111;
+				opacity: 0.9;
+				width: 100%;
+			}
+
+			header img{
+				display: none;
+				margin: 0;
+			}			

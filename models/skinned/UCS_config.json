@@ -1,0 +1,10 @@
+{
+	"baseUrl":		"models/skinned/UCS/",
+	"character":	"umich_ucs.js",
+	"skins": 		["body.jpg","muscular.jpg","skeleton.jpg","nervous_system.jpg"],
+	"morphs": 		[],
+	"x":	0,
+	"y":	-500,
+	"z":	-300,
+	"s":	30
+}
